@@ -1,3 +1,4 @@
 *.suo
-[Bb]in/
+*.vshost.*
 [Oo]bj/
+/Spacerunner3/bin/*/settings.xml
