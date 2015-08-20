@@ -10,6 +10,11 @@ namespace Spacerunner3
         private static XmlSerializer serializer = new XmlSerializer(typeof(Settings));
         public static Settings Grab;
 
+        public System.Windows.Forms.Keys KeyThrust;
+        public System.Windows.Forms.Keys KeyTurnLeft;
+        public System.Windows.Forms.Keys KeyTurnRight;
+        public System.Windows.Forms.Keys KeyPause;
+        public System.Windows.Forms.Keys KeyReset;
         public double ScreenSize;
         public double AsteroidRadius;
         public double AsteroidSpacing;
@@ -25,9 +30,15 @@ namespace Spacerunner3
         public float ShipAngularDamping;
         public float ShipThrust;
         public float ShipTorque;
+        public float FuturePrediction;
 
         public Settings()
         {
+            KeyThrust = System.Windows.Forms.Keys.W;
+            KeyTurnLeft = System.Windows.Forms.Keys.A;
+            KeyTurnRight = System.Windows.Forms.Keys.D;
+            KeyPause = System.Windows.Forms.Keys.Escape;
+            KeyReset = System.Windows.Forms.Keys.Space;
             ScreenSize = 150;
             AsteroidRadius = 20;
             AsteroidSpacing = 3;
@@ -43,6 +54,7 @@ namespace Spacerunner3
             ShipHealth = 20000.0f;
             ShipThrust = 75.0f;
             ShipTorque = 120.0f;
+            FuturePrediction = 0.0f;
         }
 
         public static Settings Load(string file)

@@ -1,4 +1,5 @@
 *.suo
 *.vshost.*
 [Oo]bj/
-/Spacerunner3/bin/*/settings.xml
+settings.xml
+*.mdb

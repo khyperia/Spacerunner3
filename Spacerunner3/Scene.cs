@@ -16,7 +16,7 @@ namespace Spacerunner3
 
         public Scene(double screenSize)
         {
-            Camera = new Camera(screenSize);
+            this.Camera = new Camera(screenSize);
             objects = new List<IObject>();
             toSpawn = new List<IObject>();
             toDie = new List<IObject>();

@@ -302,7 +302,7 @@ namespace Spacerunner3
             }
             var thrust = Settings.Grab.ShipThrust;
             var torque = Settings.Grab.ShipTorque;
-            if (scene.PressedKeys.Contains(Keys.W))
+            if (scene.PressedKeys.Contains(Settings.Grab.KeyThrust))
             {
                 var force = body.GetWorldVector(new Vector2(0, thrust));
                 body.ApplyForce(force);
@@ -310,11 +310,11 @@ namespace Spacerunner3
             }
             else
                 drawExhaust = false;
-            if (scene.PressedKeys.Contains(Keys.D))
+            if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnRight))
             {
                 body.ApplyTorque(torque);
             }
-            if (scene.PressedKeys.Contains(Keys.A))
+            if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnLeft))
             {
                 body.ApplyTorque(-torque);
             }
@@ -365,16 +365,25 @@ namespace Spacerunner3
             return player.Body.GetWorldPoint(((PolygonShape)player.Body.FixtureList[0].Shape).Vertices[vertexIndex]);
         }
 
+        private Vector2 GetFuturePos()
+        {
+            var pos = GetPos();
+            var vel = player.Body.LinearVelocity;
+            return pos + vel * Settings.Grab.FuturePrediction;
+        }
+
         public void Draw(Graphics graphics, Camera camera)
         {
-            var points = new PointF[line.Length + 1];
+            var points = new PointF[line.Length + 2];
             for (var i = 0; i < line.Length; i++)
             {
                 var point = line[i];
-                points[i + 1] = camera.Transform(point.X, point.Y);
+                points[i + 2] = camera.Transform(point.X, point.Y);
             }
             var current = GetPos();
-            points[0] = camera.Transform(current.X, current.Y);
+            points[1] = camera.Transform(current.X, current.Y);
+            var future = GetFuturePos();
+            points[0] = camera.Transform(future.X, future.Y);
             graphics.DrawLines(Pens.SlateGray, points);
         }
 

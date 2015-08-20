@@ -31,9 +31,9 @@ namespace Spacerunner3
             form.Paint += FormPaint;
             form.KeyDown += (o, e) =>
             {
-                if (e.KeyCode == Keys.Space)
+                if (e.KeyCode == Settings.Grab.KeyReset)
                     Program.Reset(scene);
-                if (e.KeyCode == Keys.Escape)
+                if (e.KeyCode == Settings.Grab.KeyPause)
                     paused = !paused;
                 scene.PressedKeys.Add(e.KeyCode);
             };
