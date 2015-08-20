@@ -8,14 +8,15 @@ namespace Spacerunner3
         {
             foreach (var obj in scene.Objects)
                 scene.Die(obj);
-            scene.Update(0.001);
+            scene.Update(0, false);
             if (scene.Objects.Count != 0)
-                throw new System.Exception();
+                throw new System.Exception("Reset failed, objects remaining: " + string.Join(", ", scene.Objects));
             scene.Camera.ResetOriginShift();
             scene.Spawn(new PhysicsManager());
             scene.Spawn(new AsteroidManager());
             scene.Spawn(new DistanceTracker(scene.Camera));
             scene.Spawn(new Player());
+            scene.Update(0, false);
         }
 
         private static void InitSettings(string filename)

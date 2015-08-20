@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework;
 using System;
 using System.Drawing;
 using FarseerPhysics.Collision.Shapes;
-using System.Windows.Forms;
 using System.Linq;
 using FarseerPhysics.Dynamics.Contacts;
 using FarseerPhysics.Collision;
@@ -215,13 +214,52 @@ namespace Spacerunner3
         }
     }
 
+    public static class JoystickManager
+    {
+        private static IntPtr joystick = IntPtr.Zero;
+
+        static JoystickManager()
+        {
+            if (SDL2.SDL.SDL_Init(SDL2.SDL.SDL_INIT_JOYSTICK) != 0)
+            {
+                throw new Exception("Couldn't init SDL_INIT_JOYSTICK");
+            }
+        }
+
+        internal static Vector2 GetJoystick()
+        {
+            if (joystick == IntPtr.Zero)
+            {
+                for (int i = 0; i < SDL2.SDL.SDL_NumJoysticks(); i++)
+                {
+                    joystick = SDL2.SDL.SDL_JoystickOpen(i);
+                    if (joystick != IntPtr.Zero)
+                    {
+                        break;
+                    }
+                    Console.WriteLine("Attempted to open joystick " + i + " and failed");
+                }
+            }
+            if (joystick == IntPtr.Zero)
+            {
+                throw new Exception("Joystick not found");
+            }
+            SDL2.SDL.SDL_JoystickUpdate();
+            short x = SDL2.SDL.SDL_JoystickGetAxis(joystick, Settings.Grab.JoystickAxisX);
+            short y = SDL2.SDL.SDL_JoystickGetAxis(joystick, Settings.Grab.JoystickAxisY);
+            float fx = (float)x / short.MaxValue * (Settings.Grab.JoystickInvertX ? -1 : 1);
+            float fy = (float)y / short.MaxValue * (Settings.Grab.JoystickInvertY ? -1 : 1);
+            return new Vector2(fx, fy);
+        }
+    }
+
     public class Player : PhysicsObject
     {
         private readonly Pen red = Pens.Red;
         private readonly Body body;
         private PlayerLineTrace[] traces;
         private bool addTrace;
-        private bool drawExhaust;
+        private double drawExhaust;
         private float health = 1.0f;
 
         public Player()
@@ -265,14 +303,14 @@ namespace Spacerunner3
                 };
                 addTrace = true;
             }
-            if (drawExhaust)
+            if (drawExhaust > 0)
             {
                 var size = Settings.Grab.ShipSize;
                 var angle = Settings.Grab.ShipShapeAngle / 2;
                 var points = new PointF[3];
                 points[0] = new PointF((float)Math.Sin(angle) * -size, (float)Math.Cos(angle) * -size);
                 points[1] = new PointF((float)Math.Sin(-angle) * -size, (float)Math.Cos(-angle) * -size);
-                points[2] = new PointF(0, -size * 2.0f);
+                points[2] = new PointF(0, -size - size * (float)drawExhaust);
                 for (int i = 0; i < points.Length; i++)
                 {
                     var vec = body.GetWorldPoint(new Vector2(points[i].X, points[i].Y));
@@ -302,21 +340,33 @@ namespace Spacerunner3
             }
             var thrust = Settings.Grab.ShipThrust;
             var torque = Settings.Grab.ShipTorque;
-            if (scene.PressedKeys.Contains(Settings.Grab.KeyThrust))
+            if (Settings.Grab.UseJoystick)
             {
-                var force = body.GetWorldVector(new Vector2(0, thrust));
+                var joystick = JoystickManager.GetJoystick();
+                joystick.Y = Math.Max(0, joystick.Y);
+                drawExhaust = joystick.Y;
+                var force = body.GetWorldVector(new Vector2(0, thrust * joystick.Y));
                 body.ApplyForce(force);
-                drawExhaust = true;
+                body.ApplyTorque(torque * joystick.X);
             }
             else
-                drawExhaust = false;
-            if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnRight))
             {
-                body.ApplyTorque(torque);
-            }
-            if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnLeft))
-            {
-                body.ApplyTorque(-torque);
+                if (scene.PressedKeys.Contains(Settings.Grab.KeyThrust))
+                {
+                    var force = body.GetWorldVector(new Vector2(0, thrust));
+                    body.ApplyForce(force);
+                    drawExhaust = 1;
+                }
+                else
+                    drawExhaust = 0;
+                if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnRight))
+                {
+                    body.ApplyTorque(torque);
+                }
+                if (scene.PressedKeys.Contains(Settings.Grab.KeyTurnLeft))
+                {
+                    body.ApplyTorque(-torque);
+                }
             }
             var damp = 1 / (float)dt;
             var targetCamera = body.Position + body.LinearVelocity * 2;

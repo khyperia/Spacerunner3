@@ -15,6 +15,11 @@ namespace Spacerunner3
         public System.Windows.Forms.Keys KeyTurnRight;
         public System.Windows.Forms.Keys KeyPause;
         public System.Windows.Forms.Keys KeyReset;
+        public bool UseJoystick;
+        public int JoystickAxisX;
+        public int JoystickAxisY;
+        public bool JoystickInvertX;
+        public bool JoystickInvertY;
         public double ScreenSize;
         public double AsteroidRadius;
         public double AsteroidSpacing;
@@ -39,6 +44,11 @@ namespace Spacerunner3
             KeyTurnRight = System.Windows.Forms.Keys.D;
             KeyPause = System.Windows.Forms.Keys.Escape;
             KeyReset = System.Windows.Forms.Keys.Space;
+            UseJoystick = false;
+            JoystickAxisX = 0;
+            JoystickAxisY = 1;
+            JoystickInvertX = false;
+            JoystickInvertY = true;
             ScreenSize = 150;
             AsteroidRadius = 20;
             AsteroidSpacing = 3;

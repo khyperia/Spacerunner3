@@ -62,7 +62,7 @@ namespace Spacerunner3
                 fps.Restart();
                 fpsCounter = (fpsCounter * 20 + 1 / elapsed) / 21;
                 if (!paused)
-                    scene.Update(elapsed);
+                    scene.Update(elapsed, true);
             }
 
             var graphics = e.Graphics;

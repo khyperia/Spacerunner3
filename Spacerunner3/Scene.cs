@@ -41,7 +41,7 @@ namespace Spacerunner3
             toSpawn.Add(obj);
         }
 
-        public void Update(double dt)
+        public void Update(double dt, bool physics)
         {
             if (toSpawn.Count > 0)
             {
@@ -51,9 +51,12 @@ namespace Spacerunner3
                 }
                 toSpawn.Clear();
             }
-            foreach (var obj in objects)
+            if (physics)
             {
-                obj.Update(this, dt);
+                foreach (var obj in objects)
+                {
+                    obj.Update(this, dt);
+                }
             }
             if (toDie.Count > 0)
             {
@@ -102,6 +105,7 @@ namespace Spacerunner3
 
         internal void ResetOriginShift()
         {
+            Center = new Vector2(0, 0);
             OnOriginShift = null;
         }
     }
