@@ -1,20 +1,20 @@
 ﻿using System;
 using System.IO;
-using System.Xml.Serialization;
+using System.Linq;
+using SDL2;
 
 namespace Spacerunner3
 {
     [Serializable]
     public class Settings
     {
-        private static XmlSerializer serializer = new XmlSerializer(typeof(Settings));
         public static Settings Grab;
 
-        public System.Windows.Forms.Keys KeyThrust;
-        public System.Windows.Forms.Keys KeyTurnLeft;
-        public System.Windows.Forms.Keys KeyTurnRight;
-        public System.Windows.Forms.Keys KeyPause;
-        public System.Windows.Forms.Keys KeyReset;
+        public SDL.SDL_Scancode KeyThrust;
+        public SDL.SDL_Scancode KeyTurnLeft;
+        public SDL.SDL_Scancode KeyTurnRight;
+        public SDL.SDL_Scancode KeyPause;
+        public SDL.SDL_Scancode KeyReset;
         public bool UseJoystick;
         public int JoystickAxisX;
         public int JoystickAxisY;
@@ -39,11 +39,11 @@ namespace Spacerunner3
 
         public Settings()
         {
-            KeyThrust = System.Windows.Forms.Keys.W;
-            KeyTurnLeft = System.Windows.Forms.Keys.A;
-            KeyTurnRight = System.Windows.Forms.Keys.D;
-            KeyPause = System.Windows.Forms.Keys.Escape;
-            KeyReset = System.Windows.Forms.Keys.Space;
+            KeyThrust = SDL.SDL_Scancode.SDL_SCANCODE_W;
+            KeyTurnLeft = SDL.SDL_Scancode.SDL_SCANCODE_A;
+            KeyTurnRight = SDL.SDL_Scancode.SDL_SCANCODE_D;
+            KeyPause = SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE;
+            KeyReset = SDL.SDL_Scancode.SDL_SCANCODE_SPACE;
             UseJoystick = false;
             JoystickAxisX = 0;
             JoystickAxisY = 1;
@@ -69,14 +69,78 @@ namespace Spacerunner3
 
         public static Settings Load(string file)
         {
-            using (var stream = File.OpenRead(file))
-                return (Settings)serializer.Deserialize(stream);
+            var settings = new Settings();
+            var type = settings.GetType();
+            foreach (var line_ in File.ReadAllLines(file))
+            {
+                var line = line_.Trim();
+                if (string.IsNullOrEmpty(line) || line[0] == '#')
+                    continue;
+                var equal = line.IndexOf('=');
+                if (equal == -1)
+                {
+                    Console.WriteLine("Invalid config line:\n{0}\n - Ignoring", line);
+                    continue;
+                }
+                var key = line.Substring(0, equal).Trim();
+                var value = line.Substring(equal + 1).Trim();
+                var fld = type.GetField(key);
+                if (fld == null)
+                {
+                    Console.WriteLine("Unknown config line:\n{0}\n - Ignoring", line);
+                    continue;
+                }
+                bool bvalue;
+                int ivalue;
+                float fvalue;
+                double dvalue;
+                SDL.SDL_Scancode svalue;
+                if (fld.FieldType == typeof(bool) && bool.TryParse(value, out bvalue))
+                {
+                    fld.SetValue(settings, bvalue);
+                }
+                else if (fld.FieldType == typeof(int) && int.TryParse(value, out ivalue))
+                {
+                    fld.SetValue(settings, ivalue);
+                }
+                else if (fld.FieldType == typeof(float) && float.TryParse(value, out fvalue))
+                {
+                    fld.SetValue(settings, fvalue);
+                }
+                else if (fld.FieldType == typeof(double) && double.TryParse(value, out dvalue))
+                {
+                    fld.SetValue(settings, dvalue);
+                }
+                else if (fld.FieldType == typeof(SDL.SDL_Scancode) && (svalue = SDL.SDL_GetScancodeFromName(value)) != SDL.SDL_Scancode.SDL_SCANCODE_UNKNOWN)
+                {
+                    fld.SetValue(settings, svalue);
+                }
+                else
+                {
+                    Console.WriteLine("Bad value config line:\n{0}\n - Ignoring", line);
+                }
+            }
+            return settings;
+        }
+
+        private string FieldToString(System.Reflection.FieldInfo f)
+        {
+            string value;
+            if (f.FieldType == typeof(SDL.SDL_Scancode))
+            {
+                value = SDL.SDL_GetScancodeName((SDL.SDL_Scancode)f.GetValue(this));
+            }
+            else
+            {
+                value = f.GetValue(this).ToString();
+            }
+            return f.Name + " = " + value;
         }
 
         public void Save(string file)
         {
-            using (var stream = File.OpenWrite(file))
-                serializer.Serialize(stream, this);
+            var contents = this.GetType().GetFields().Where(f => f.Name != "Grab").Select(FieldToString);
+            File.WriteAllLines(file, contents);
         }
     }
 }

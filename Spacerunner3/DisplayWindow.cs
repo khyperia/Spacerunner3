@@ -1,72 +1,120 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Forms;
+using SDL2;
 
 namespace Spacerunner3
 {
+    public class Graphics
+    {
+        IntPtr renderer;
+
+        public Graphics(IntPtr renderer)
+        {
+            this.renderer = renderer;
+        }
+
+        public void Clear(byte r, byte g, byte b)
+        {
+            SDL.SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+            SDL.SDL_RenderClear(renderer);
+        }
+
+        public void Line(Point p1, Point p2, byte r, byte g, byte b)
+        {
+            SDL.SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+            SDL.SDL_RenderDrawLine(renderer, p1.X, p1.Y, p2.X, p2.Y);
+        }
+
+        public void Arc(Vector2 center, double radius, double radStart, double radAmount, byte r, byte g, byte b)
+        {
+            double rot = 0;
+            const double inc = Math.PI / 64;
+            for (; rot + inc < radAmount; rot += inc)
+            {
+                var one = center + radius * new Vector2(Math.Cos(radStart + rot), Math.Sin(radStart + rot));
+                var two = center + radius * new Vector2(Math.Cos(radStart + rot + inc), Math.Sin(radStart + rot + inc));
+                Line(one.Point, two.Point, r, g, b);
+            }
+            var onef = center + radius * new Vector2(Math.Cos(radStart + rot), Math.Sin(radStart + rot));
+            var twof = center + radius * new Vector2(Math.Cos(radStart + radAmount), Math.Sin(radStart + radAmount));
+            Line(onef.Point, twof.Point, r, g, b);
+        }
+    }
+
     public class DisplayWindow
     {
-        private readonly Form form;
+        private readonly IntPtr window;
+        private readonly IntPtr renderer;
         private readonly Scene scene;
         private int thing;
         private Stopwatch fps;
         private double fpsCounter;
         private bool paused;
 
-        private class MyForm : Form
-        {
-            public MyForm()
-            {
-                DoubleBuffered = true;
-            }
-        }
-
         public DisplayWindow(Scene scene)
         {
-            this.scene = scene;
-            form = new MyForm();
-            form.Text = "Spacerunner 3";
-            form.ClientSize = new Size(1000, 800);
-            form.Paint += FormPaint;
-            form.KeyDown += (o, e) =>
+            window = SDL.SDL_CreateWindow("Spacerunner 3", 300, 300, 1000, 800, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE);
+            if (window == IntPtr.Zero)
             {
-                if (e.KeyCode == Settings.Grab.KeyReset)
-                    Program.Reset(scene);
-                if (e.KeyCode == Settings.Grab.KeyPause)
-                    paused = !paused;
-                scene.PressedKeys.Add(e.KeyCode);
-            };
-            form.KeyUp += (o, e) => scene.PressedKeys.Remove(e.KeyCode);
+                (-1).CheckSdl();
+            }
+            renderer = SDL.SDL_CreateRenderer(window, -1, (uint)SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
+            if (renderer == IntPtr.Zero)
+            {
+                (-1).CheckSdl();
+            }
+            this.scene = scene;
         }
 
         public void Run()
         {
-            Application.Run(form);
+            while (true)
+            {
+                SDL.SDL_Event evnt;
+                if (SDL.SDL_PollEvent(out evnt) != 0)
+                {
+                    if (evnt.type == SDL.SDL_EventType.SDL_QUIT)
+                    {
+                        break;
+                    }
+                    else if (evnt.type == SDL.SDL_EventType.SDL_KEYDOWN)
+                    {
+                        if (evnt.key.keysym.scancode == Settings.Grab.KeyReset)
+                            Program.Reset(scene);
+                        if (evnt.key.keysym.scancode == Settings.Grab.KeyPause)
+                            paused = !paused;
+                        scene.PressedKeys.Add(evnt.key.keysym.scancode);
+                    }
+                    else if (evnt.type == SDL.SDL_EventType.SDL_KEYUP)
+                    {
+                        scene.PressedKeys.Remove(evnt.key.keysym.scancode);
+                    }
+                }
+                else
+                {
+                    FormPaint();
+                }
+            }
         }
 
-        private void FormPaint(object sender, PaintEventArgs e)
+        private void FormPaint()
         {
-            scene.Camera.ScreenScale = form.ClientSize;
+            int width, height;
+            SDL.SDL_GetRendererOutputSize(renderer, out width, out height).CheckSdl();
+            scene.Camera.ScreenScale = new Vector2(width, height);
             if (fps == null)
                 fps = Stopwatch.StartNew();
             else
             {
                 var elapsed = fps.Elapsed.TotalSeconds;
-                var timeToWait = 0.01 - elapsed;
-                if (timeToWait > 0)
-                {
-                    System.Threading.Thread.Sleep(TimeSpan.FromSeconds(timeToWait));
-                    elapsed = fps.Elapsed.TotalSeconds;
-                }
                 fps.Restart();
                 fpsCounter = (fpsCounter * 20 + 1 / elapsed) / 21;
                 if (!paused)
-                    scene.Update(elapsed, true);
+                    scene.Update(elapsed);
             }
 
-            var graphics = e.Graphics;
-            graphics.Clear(Color.DarkSlateGray);
+            var graphics = new Graphics(renderer);
+            graphics.Clear(40, 79, 79);
 
             var camera = scene.Camera;
             foreach (var drawable in scene.Drawables)
@@ -74,19 +122,15 @@ namespace Spacerunner3
                 drawable.Draw(graphics, camera);
             }
 
-            graphics.DrawArc(Pens.DarkOrange, form.ClientSize.Width - 98, 2, 96, 96, 0, thing = (thing + 1) % 360);
-            var str = (int)fpsCounter + "fps";
-            var measure = graphics.MeasureString(str, Util.font);
-            graphics.DrawString(str, Util.font, Brushes.DarkOrange, new PointF(form.ClientSize.Width - 50 - measure.Width / 2, 50 - measure.Height / 2));
+            const int wrap = 100;
+            graphics.Arc(new Vector2(width - 50, 50), 48, 0, (thing = (thing + 1) % wrap) * (2 * Math.PI / wrap), 255, 140, 0);
 
-            if (paused)
+            if (thing == 0)
             {
-                str = "PAUSED";
-                measure = graphics.MeasureString(str, Util.font);
-                graphics.DrawString(str, Util.font, Brushes.Red, new PointF(form.ClientSize.Width / 2 - measure.Width / 2, form.ClientSize.Height / 2 - measure.Height / 2));
+                SDL.SDL_SetWindowTitle(window, "Spacerunner 3 - " + fpsCounter + "fps" + (paused ? " - PAUSED" : ""));
             }
 
-            form.Invalidate();
+            SDL.SDL_RenderPresent(renderer);
         }
     }
 }

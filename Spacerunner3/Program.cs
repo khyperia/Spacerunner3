@@ -6,9 +6,8 @@ namespace Spacerunner3
     {
         public static void Reset(Scene scene)
         {
-            foreach (var obj in scene.Objects)
-                scene.Die(obj);
-            scene.Update(0, false);
+            scene.Spawn(new SceneClearer());
+            scene.Update(0);
             if (scene.Objects.Count != 0)
                 throw new System.Exception("Reset failed, objects remaining: " + string.Join(", ", scene.Objects));
             scene.Camera.ResetOriginShift();
@@ -16,19 +15,20 @@ namespace Spacerunner3
             scene.Spawn(new AsteroidManager());
             scene.Spawn(new DistanceTracker(scene.Camera));
             scene.Spawn(new Player());
-            scene.Update(0, false);
+            scene.Update(0);
         }
 
         private static void InitSettings(string filename)
         {
-            filename = filename ?? "settings.xml";
+            filename = filename ?? "settings.cfg";
             Settings.Grab = File.Exists(filename) ? Settings.Load(filename) : new Settings();
         }
 
         private static void SaveSettings(string filename)
         {
-            filename = filename ?? "settings.xml";
-            Settings.Grab.Save(filename);
+            filename = filename ?? "settings.cfg";
+            if (!File.Exists(filename))
+                Settings.Grab.Save(filename);
         }
 
         static void Main(string[] args)

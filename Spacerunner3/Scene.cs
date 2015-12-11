@@ -1,9 +1,7 @@
-﻿using Microsoft.Xna.Framework;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 using System;
+using SDL2;
 
 namespace Spacerunner3
 {
@@ -12,7 +10,7 @@ namespace Spacerunner3
         private List<IObject> objects;
         private List<IObject> toSpawn;
         private List<IObject> toDie;
-        private ISet<Keys> pressedKeys;
+        private ISet<SDL.SDL_Scancode> pressedKeys;
 
         public Scene(double screenSize)
         {
@@ -20,7 +18,7 @@ namespace Spacerunner3
             objects = new List<IObject>();
             toSpawn = new List<IObject>();
             toDie = new List<IObject>();
-            pressedKeys = new HashSet<Keys>();
+            pressedKeys = new HashSet<SDL.SDL_Scancode>();
         }
 
         public Camera Camera { get; }
@@ -29,7 +27,7 @@ namespace Spacerunner3
 
         public IEnumerable<IDrawable> Drawables => objects.OfType<IDrawable>();
 
-        public ISet<Keys> PressedKeys => pressedKeys;
+        public ISet<SDL.SDL_Scancode> PressedKeys => pressedKeys;
 
         public void Die(IObject obj)
         {
@@ -41,7 +39,7 @@ namespace Spacerunner3
             toSpawn.Add(obj);
         }
 
-        public void Update(double dt, bool physics)
+        public void Update(double dt)
         {
             if (toSpawn.Count > 0)
             {
@@ -51,12 +49,9 @@ namespace Spacerunner3
                 }
                 toSpawn.Clear();
             }
-            if (physics)
+            foreach (var obj in objects)
             {
-                foreach (var obj in objects)
-                {
-                    obj.Update(this, dt);
-                }
+                obj.Update(this, dt);
             }
             if (toDie.Count > 0)
             {
@@ -84,7 +79,7 @@ namespace Spacerunner3
         public double Size => FixedSize * SizeMultiplier;
         public double FixedSize { get; }
         public double SizeMultiplier { get; set; }
-        public Size ScreenScale { get; set; }
+        public Vector2 ScreenScale { get; set; }
 
         public event Action<Vector2> OnOriginShift;
 
@@ -94,13 +89,13 @@ namespace Spacerunner3
             Center = new Vector2(0, 0);
         }
 
-        public PointF Transform(double x, double y)
+        public Vector2 Transform(double x, double y)
         {
-            var point = new Vector2((float)x, (float)y);
+            var point = new Vector2(x, y);
             point -= Center;
-            point /= (float)Size;
-            point = (point * 0.5f + new Vector2(0.5f, (float)ScreenScale.Height / (2 * ScreenScale.Width))) * ScreenScale.Width;
-            return new PointF(point.X, point.Y);
+            point *= 1 / Size;
+            point = (point * 0.5f + new Vector2(0.5f, ScreenScale.Y / (2 * ScreenScale.X))) * ScreenScale.X;
+            return new Vector2(point.X, point.Y);
         }
 
         internal void ResetOriginShift()
@@ -113,7 +108,7 @@ namespace Spacerunner3
     public class DistanceTracker : IObject, IDrawable
     {
         private Vector2 originShift;
-        private float distance;
+        private double distance;
         private double time;
 
         public DistanceTracker(Camera camera)
@@ -124,6 +119,10 @@ namespace Spacerunner3
 
         public void OnDie(Scene scene)
         {
+            Console.WriteLine("distance:  " + distance);
+            Console.WriteLine("dist/time: " + distance / time);
+            Console.WriteLine("time:      " + time);
+            Console.WriteLine();
         }
 
         public void Update(Scene scene, double dt)
@@ -131,13 +130,14 @@ namespace Spacerunner3
             var player = scene.Objects.OfType<Player>().FirstOrDefault();
             if (player != null)
             {
-                distance = (player.Body.Position + originShift).Length();
+                distance = (player.Body.Position.MyVec() + originShift).Length;
                 time += dt;
             }
         }
 
         public void Draw(Graphics graphics, Camera camera)
         {
+            /*
             var str = "distance:  " + distance;
             var measure = graphics.MeasureString(str, Util.font);
             graphics.DrawString(str, Util.font, Brushes.Yellow, new PointF(110, 25 - measure.Height / 2));
@@ -147,6 +147,7 @@ namespace Spacerunner3
             str = "dist/time: " + distance / time;
             measure = graphics.MeasureString(str, Util.font);
             graphics.DrawString(str, Util.font, Brushes.Yellow, new PointF(110, 50 - measure.Height / 2));
+            */
         }
     }
 

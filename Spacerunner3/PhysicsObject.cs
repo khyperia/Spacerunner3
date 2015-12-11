@@ -1,25 +1,47 @@
-﻿using FarseerPhysics.Common;
-using FarseerPhysics.Dynamics;
-using FarseerPhysics.Factories;
-using Microsoft.Xna.Framework;
-using System;
-using System.Drawing;
-using FarseerPhysics.Collision.Shapes;
+﻿using System;
 using System.Linq;
-using FarseerPhysics.Dynamics.Contacts;
 using FarseerPhysics.Collision;
+using FarseerPhysics.Collision.Shapes;
+using FarseerPhysics.Common;
+using FarseerPhysics.Dynamics;
+using FarseerPhysics.Dynamics.Contacts;
+using FarseerPhysics.Factories;
+using SDL2;
 
 namespace Spacerunner3
 {
     public static class Util
     {
         public static Random rand = new Random();
-        public static Font font = new Font(FontFamily.GenericMonospace, 12);
+        public static void CheckSdl(this int retval)
+        {
+            if (retval != 0)
+            {
+                throw new Exception("SDL call failure: returned (" + retval + "): " + SDL.SDL_GetError());
+            }
+        }
+
+        public static Vector2 MyVec(this Microsoft.Xna.Framework.Vector2 vec)
+        {
+            return new Vector2(vec.X, vec.Y);
+        }
+    }
+
+    class MyColor
+    {
+        public readonly byte r, g, b;
+
+        public MyColor(byte r, byte g, byte b)
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+        }
     }
 
     public abstract class PhysicsObject : IObject, IDrawable
     {
-        private static Pen defaultPen = Pens.White;
+        private static MyColor defaultPen = new MyColor(255, 255, 255);
         protected static World world;
 
         public abstract void Update(Scene scene, double dt);
@@ -31,58 +53,30 @@ namespace Spacerunner3
             var body = Body;
             if (body == null)
                 return;
-            var pen = body.UserData as Pen ?? defaultPen;
+            var pen = body.UserData as MyColor ?? defaultPen;
             foreach (var fixture in body.FixtureList)
             {
-                AABB aabb;
-                Transform transform;
-                body.GetTransform(out transform);
-                var draw = false;
-                for (var i = 0; i < fixture.ProxyCount; i++)
-                {
-                    fixture.Shape.ComputeAABB(out aabb, ref transform, i);
-                    var topleft = aabb.Center - aabb.Extents;
-                    var bottomright = aabb.Center + aabb.Extents;
-                    var tl = camera.Transform(topleft.X, topleft.Y);
-                    var br = camera.Transform(bottomright.X, bottomright.Y);
-                    if (graphics.ClipBounds.IntersectsWith(new RectangleF(tl, new SizeF(br.X - tl.X, br.Y - tl.Y))))
-                    {
-                        draw = true;
-                        break;
-                    }
-                }
-                if (draw == false)
-                    continue;
-
                 var shape = fixture.Shape;
                 var poly = shape as PolygonShape;
                 var edge = shape as EdgeShape;
-                var circle = shape as CircleShape;
                 if (poly != null)
                 {
-                    var points = new PointF[poly.Vertices.Count];
                     for (int i = 0; i < poly.Vertices.Count; i++)
                     {
-                        var vert = body.GetWorldPoint(poly.Vertices[i]);
-                        points[i] = camera.Transform(vert.X, vert.Y);
+                        var vert1 = body.GetWorldPoint(poly.Vertices[i]).MyVec();
+                        var vert2 = body.GetWorldPoint(poly.Vertices[(i + 1) % poly.Vertices.Count]).MyVec();
+                        vert1 = camera.Transform(vert1.X, vert1.Y);
+                        vert2 = camera.Transform(vert2.X, vert2.Y);
+                        graphics.Line(vert1.Point, vert2.Point, pen.r, pen.g, pen.b);
                     }
-                    graphics.DrawPolygon(pen, points);
                 }
                 else if (edge != null)
                 {
-                    var v1 = body.GetWorldPoint(edge.Vertex1);
-                    var v2 = body.GetWorldPoint(edge.Vertex2);
-                    graphics.DrawLine(pen, camera.Transform(v1.X, v1.Y), camera.Transform(v2.X, v2.Y));
-                }
-                else if (circle != null)
-                {
-                    var pos = body.GetWorldPoint(circle.Position);
-                    var topLeft = pos - new Vector2(circle.Radius, circle.Radius);
-                    var bottomRight = pos + new Vector2(circle.Radius, circle.Radius);
-                    var tl = camera.Transform(topLeft.X, topLeft.Y);
-                    var br = camera.Transform(bottomRight.X, bottomRight.Y);
-                    var sz = new SizeF(br.X - tl.X, br.Y - tl.Y);
-                    graphics.DrawEllipse(pen, new RectangleF(tl, sz));
+                    var vert1 = body.GetWorldPoint(edge.Vertex1).MyVec();
+                    var vert2 = body.GetWorldPoint(edge.Vertex2).MyVec();
+                    vert1 = camera.Transform(vert1.X, vert1.Y);
+                    vert2 = camera.Transform(vert2.X, vert2.Y);
+                    graphics.Line(vert1.Point, vert2.Point, pen.r, pen.g, pen.b);
                 }
                 else
                 {
@@ -99,19 +93,33 @@ namespace Spacerunner3
         }
     }
 
+    public class SceneClearer : PhysicsObject
+    {
+        public override Body Body => null;
+
+        public override void Update(Scene scene, double dt)
+        {
+            foreach (var obj in scene.Objects)
+                scene.Die(obj);
+        }
+    }
+
     public class PhysicsManager : PhysicsObject
     {
         public PhysicsManager()
         {
             if (world == null)
-                world = new World(new Vector2(0, 0));
+                world = new World(new Microsoft.Xna.Framework.Vector2(0, 0));
         }
 
         public override Body Body => null;
 
         public override void Update(Scene scene, double dt)
         {
-            world.Step((float)dt);
+            if (dt > 0)
+            {
+                world.Step((float)dt);
+            }
         }
     }
 
@@ -123,7 +131,7 @@ namespace Spacerunner3
             var good = true;
             foreach (var asteroid in scene.Objects.OfType<Asteroid>())
             {
-                if ((asteroid.Body.Position - pos).LengthSquared() < roidRadius * roidRadius * Settings.Grab.AsteroidSpacing)
+                if ((asteroid.Body.Position - pos.Xna).LengthSquared() < roidRadius * roidRadius * Settings.Grab.AsteroidSpacing)
                 {
                     good = false;
                     break;
@@ -171,25 +179,25 @@ namespace Spacerunner3
                 var vertx = (float)((Util.rand.NextDouble() * 2 - 1) * size);
                 var verty = (float)((Util.rand.NextDouble() * 2 - 1) * size);
                 var vert = new Vector2(vertx, verty);
-                if (vert.LengthSquared() > size * size)
+                if (vert.Length2 > size * size)
                 {
                     i--;
                     continue;
                 }
-                verts.Add(vert);
+                verts.Add(vert.Xna);
             }
             verts = FarseerPhysics.Common.ConvexHull.GiftWrap.GetConvexHull(verts);
-            body = BodyFactory.CreatePolygon(world, verts, 1, position);
+            body = BodyFactory.CreatePolygon(world, verts, 1, position.Xna);
             body.BodyType = BodyType.Dynamic;
             body.AngularDamping = 0;
             body.LinearDamping = 0;
             body.Restitution = Settings.Grab.ObjectRestitution;
             if (Settings.Grab.AsteroidInitialVel > 0)
             {
-                Vector2 vel;
+                Microsoft.Xna.Framework.Vector2 vel;
                 do
                 {
-                    vel = new Vector2((float)(Util.rand.NextDouble() * 2 - 1), (float)((Util.rand.NextDouble() * 2 - 1)));
+                    vel = new Microsoft.Xna.Framework.Vector2((float)(Util.rand.NextDouble() * 2 - 1), (float)((Util.rand.NextDouble() * 2 - 1)));
                 } while (vel.LengthSquared() > 1);
                 vel *= Settings.Grab.AsteroidInitialVel;
                 body.LinearVelocity = vel;
@@ -207,7 +215,7 @@ namespace Spacerunner3
 
         public override void Update(Scene scene, double dt)
         {
-            var offset = body.Position - scene.Camera.Center;
+            var offset = body.Position - scene.Camera.Center.Xna;
             offset /= (float)scene.Camera.FixedSize * 1.5f;
             if (Math.Abs(offset.X) > 1 || Math.Abs(offset.Y) > 1)
                 scene.Die(this);
@@ -255,7 +263,7 @@ namespace Spacerunner3
 
     public class Player : PhysicsObject
     {
-        private readonly Pen red = Pens.Red;
+        private readonly MyColor red = new MyColor(255, 0, 0);
         private readonly Body body;
         private PlayerLineTrace[] traces;
         private bool addTrace;
@@ -267,11 +275,11 @@ namespace Spacerunner3
             var verts = new Vertices();
             var size = Settings.Grab.ShipSize;
             var angle = Settings.Grab.ShipShapeAngle;
-            verts.Add(new Vector2(0, size));
-            verts.Add(new Vector2((float)Math.Sin(angle) * -size, (float)Math.Cos(angle) * -size));
-            verts.Add(new Vector2((float)Math.Sin(-angle) * -size, (float)Math.Cos(-angle) * -size));
+            verts.Add(new Microsoft.Xna.Framework.Vector2(0, size));
+            verts.Add(new Microsoft.Xna.Framework.Vector2((float)Math.Sin(angle) * -size, (float)Math.Cos(angle) * -size));
+            verts.Add(new Microsoft.Xna.Framework.Vector2((float)Math.Sin(-angle) * -size, (float)Math.Cos(-angle) * -size));
             body = BodyFactory.CreatePolygon(world, verts, 1, new Vector2(0, 0));
-            body.UserData = Pens.Yellow;
+            body.UserData = new MyColor(255, 255, 0);
             body.BodyType = BodyType.Dynamic;
             body.LinearDamping = 0;
             body.AngularDamping = Settings.Grab.ShipAngularDamping;
@@ -307,22 +315,22 @@ namespace Spacerunner3
             {
                 var size = Settings.Grab.ShipSize;
                 var angle = Settings.Grab.ShipShapeAngle / 2;
-                var points = new PointF[3];
-                points[0] = new PointF((float)Math.Sin(angle) * -size, (float)Math.Cos(angle) * -size);
-                points[1] = new PointF((float)Math.Sin(-angle) * -size, (float)Math.Cos(-angle) * -size);
-                points[2] = new PointF(0, -size - size * (float)drawExhaust);
+                var points = new Vector2[3];
+                points[0] = new Vector2((float)Math.Sin(angle) * -size, (float)Math.Cos(angle) * -size);
+                points[1] = new Vector2((float)Math.Sin(-angle) * -size, (float)Math.Cos(-angle) * -size);
+                points[2] = new Vector2(0, -size - size * (float)drawExhaust);
                 for (int i = 0; i < points.Length; i++)
                 {
-                    var vec = body.GetWorldPoint(new Vector2(points[i].X, points[i].Y));
+                    var vec = body.GetWorldPoint(new Microsoft.Xna.Framework.Vector2((float)points[i].X, (float)points[i].Y));
                     points[i] = camera.Transform(vec.X, vec.Y);
                 }
-                graphics.DrawPolygon(red, points);
+                for (int i = 0; i < points.Length; i++)
+                {
+                    graphics.Line(points[i].Point, points[(i + 1) % points.Length].Point, red.r, red.g, red.b);
+                }
             }
             base.Draw(graphics, camera);
-            graphics.DrawArc(red, new Rectangle(0, 0, 100, 100), 0, health * 360);
-            var healthStr = (health * 100) + "%";
-            var strSize = graphics.MeasureString(healthStr, Util.font);
-            graphics.DrawString(healthStr, Util.font, Brushes.Red, new PointF(50 - strSize.Width / 2, 50 - strSize.Height / 2));
+            graphics.Arc(new Vector2(50, 50), 50, 0, health * (2 * Math.PI), red.r, red.g, red.b);
         }
 
         public override void Update(Scene scene, double dt)
@@ -338,22 +346,26 @@ namespace Spacerunner3
                 scene.Die(this);
                 return;
             }
+            if (dt <= 0)
+            {
+                return;
+            }
             var thrust = Settings.Grab.ShipThrust;
             var torque = Settings.Grab.ShipTorque;
             if (Settings.Grab.UseJoystick)
             {
                 var joystick = JoystickManager.GetJoystick();
-                joystick.Y = Math.Max(0, joystick.Y);
+                joystick = new Vector2(joystick.X, Math.Max(0, joystick.Y));
                 drawExhaust = joystick.Y;
-                var force = body.GetWorldVector(new Vector2(0, thrust * joystick.Y));
+                var force = body.GetWorldVector(new Vector2(0, thrust * joystick.Y).Xna);
                 body.ApplyForce(force);
-                body.ApplyTorque(torque * joystick.X);
+                body.ApplyTorque((float)(torque * joystick.X));
             }
             else
             {
                 if (scene.PressedKeys.Contains(Settings.Grab.KeyThrust))
                 {
-                    var force = body.GetWorldVector(new Vector2(0, thrust));
+                    var force = body.GetWorldVector(new Microsoft.Xna.Framework.Vector2(0, thrust));
                     body.ApplyForce(force);
                     drawExhaust = 1;
                 }
@@ -369,16 +381,16 @@ namespace Spacerunner3
                 }
             }
             var damp = 1 / (float)dt;
-            var targetCamera = body.Position + body.LinearVelocity * 2;
+            var targetCamera = (body.Position + body.LinearVelocity * 2).MyVec();
             var oldCenter = scene.Camera.Center;
-            if (float.IsNaN(oldCenter.X))
+            if (double.IsNaN(oldCenter.X))
                 throw new Exception();
-            scene.Camera.Center = (oldCenter * damp + targetCamera) / (damp + 1);
-            scene.Camera.CenterVelocity = (scene.Camera.Center - oldCenter) / (float)dt;
+            scene.Camera.Center = (oldCenter * damp + targetCamera) * (1 / (damp + 1));
+            scene.Camera.CenterVelocity = (scene.Camera.Center - oldCenter) * (1 / dt);
 
-            if (scene.Camera.Center.LengthSquared() > 100 * 100)
+            if (scene.Camera.Center.Length2 > 100 * 100)
             {
-                world.ShiftOrigin(scene.Camera.Center);
+                world.ShiftOrigin(new Microsoft.Xna.Framework.Vector2((float)scene.Camera.Center.X, (float)scene.Camera.Center.Y));
                 scene.Camera.OriginShift();
             }
         }
@@ -411,20 +423,20 @@ namespace Spacerunner3
         private Vector2 GetPos()
         {
             if (player.Body.FixtureList == null)
-                return player.Body.Position;
-            return player.Body.GetWorldPoint(((PolygonShape)player.Body.FixtureList[0].Shape).Vertices[vertexIndex]);
+                return player.Body.Position.MyVec();
+            return player.Body.GetWorldPoint(((PolygonShape)player.Body.FixtureList[0].Shape).Vertices[vertexIndex]).MyVec();
         }
 
         private Vector2 GetFuturePos()
         {
             var pos = GetPos();
-            var vel = player.Body.LinearVelocity;
+            var vel = player.Body.LinearVelocity.MyVec();
             return pos + vel * Settings.Grab.FuturePrediction;
         }
 
         public void Draw(Graphics graphics, Camera camera)
         {
-            var points = new PointF[line.Length + 2];
+            var points = new Vector2[line.Length + 2];
             for (var i = 0; i < line.Length; i++)
             {
                 var point = line[i];
@@ -434,7 +446,10 @@ namespace Spacerunner3
             points[1] = camera.Transform(current.X, current.Y);
             var future = GetFuturePos();
             points[0] = camera.Transform(future.X, future.Y);
-            graphics.DrawLines(Pens.SlateGray, points);
+            for (int i = 0; i < points.Length - 1; i++)
+            {
+                graphics.Line(points[i].Point, points[i + 1].Point, 112, 128, 144);
+            }
         }
 
         public void OnDie(Scene scene)
