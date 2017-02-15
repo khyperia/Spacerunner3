@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FarseerPhysics.Collision;
 using FarseerPhysics.Collision.Shapes;
 using FarseerPhysics.Common;
 using FarseerPhysics.Dynamics;
@@ -404,13 +403,16 @@ namespace Spacerunner3
         private readonly int vertexIndex;
         private double counter;
 
+        private const int NumPoints = 10;
+        private const float PointFrequency = 0.25f;
+
         public PlayerLineTrace(Player player, Camera camera, int vertexIndex)
         {
             this.vertexIndex = vertexIndex;
             this.player = player;
             subscribed = camera;
             subscribed.OnOriginShift += OnOriginShift;
-            line = new Vector2[50];
+            line = new Vector2[NumPoints];
             counter = 0;
         }
 
@@ -459,11 +461,10 @@ namespace Spacerunner3
 
         public void Update(Scene scene, double dt)
         {
-            var rollover = 0.125f;
             counter += dt;
-            if (counter > rollover)
+            if (counter > PointFrequency)
             {
-                counter %= rollover;
+                counter %= PointFrequency;
                 for (var i = line.Length - 2; i >= 0; i--)
                     line[i + 1] = line[i];
                 line[0] = GetPos();

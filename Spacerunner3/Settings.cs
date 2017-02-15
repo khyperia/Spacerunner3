@@ -15,6 +15,7 @@ namespace Spacerunner3
         public SDL.SDL_Scancode KeyTurnRight;
         public SDL.SDL_Scancode KeyPause;
         public SDL.SDL_Scancode KeyReset;
+        public SDL.SDL_Scancode KeySaveVideo;
         public bool UseJoystick;
         public int JoystickAxisX;
         public int JoystickAxisY;
@@ -44,6 +45,7 @@ namespace Spacerunner3
             KeyTurnRight = SDL.SDL_Scancode.SDL_SCANCODE_D;
             KeyPause = SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE;
             KeyReset = SDL.SDL_Scancode.SDL_SCANCODE_SPACE;
+            KeySaveVideo = SDL.SDL_Scancode.SDL_SCANCODE_P;
             UseJoystick = false;
             JoystickAxisX = 0;
             JoystickAxisY = 1;

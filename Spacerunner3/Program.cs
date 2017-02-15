@@ -33,12 +33,18 @@ namespace Spacerunner3
 
         static void Main(string[] args)
         {
-            InitSettings(args.Length == 0 ? null : args[0]);
+            var arg = args.Length == 0 ? null : args[0];
+            if (arg?.EndsWith(".srv3") == true)
+            {
+                new MovieWindow(arg).Run();
+                return;
+            }
+            InitSettings(arg);
             var scene = new Scene(Settings.Grab.ScreenSize);
             Reset(scene);
             var display = new DisplayWindow(scene);
             display.Run();
-            SaveSettings(args.Length == 0 ? null : args[0]);
+            SaveSettings(arg);
         }
     }
 }

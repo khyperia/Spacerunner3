@@ -135,6 +135,11 @@ namespace Spacerunner3
             }
         }
 
+        public string Describe()
+        {
+            return distance.ToString("F2") + "@" + (distance / time).ToString("F2");
+        }
+
         public void Draw(Graphics graphics, Camera camera)
         {
             /*
