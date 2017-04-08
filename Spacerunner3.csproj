@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net40</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--<PackageReference Include="sdl2-cs" Version="2.0" />-->
+    <PackageReference Include="FarseerPhysics" Version="3.5.0" />
+  </ItemGroup>
+</Project>

@@ -178,7 +178,7 @@ namespace Spacerunner3
             {
                 (-1).CheckSdl();
             }
-            renderer = SDL.SDL_CreateRenderer(window, -1, (uint)SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
+            renderer = SDL.SDL_CreateRenderer(window, -1, SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
             if (renderer == IntPtr.Zero)
             {
                 (-1).CheckSdl();
@@ -235,7 +235,7 @@ namespace Spacerunner3
             {
                 (-1).CheckSdl();
             }
-            renderer = SDL.SDL_CreateRenderer(window, -1, (uint)SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
+            renderer = SDL.SDL_CreateRenderer(window, -1, SDL.SDL_RendererFlags.SDL_RENDERER_PRESENTVSYNC);
             if (renderer == IntPtr.Zero)
             {
                 (-1).CheckSdl();

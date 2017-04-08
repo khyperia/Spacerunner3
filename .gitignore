@@ -1,5 +1,5 @@
-*.suo
-*.vshost.*
-[Oo]bj/
-settings.xml
-*.mdb
+/bin/
+/obj/
+/settings.cfg
+!/bin/Release/net40/Spacerunner3.exe
+!/bin/Release/net40/FarseerPhysics.dll
