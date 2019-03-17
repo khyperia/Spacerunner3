@@ -77,13 +77,17 @@ namespace Spacerunner3
             {
                 var line = line_.Trim();
                 if (string.IsNullOrEmpty(line) || line[0] == '#')
+                {
                     continue;
+                }
+
                 var equal = line.IndexOf('=');
                 if (equal == -1)
                 {
                     Console.WriteLine("Invalid config line:\n{0}\n - Ignoring", line);
                     continue;
                 }
+
                 var key = line.Substring(0, equal).Trim();
                 var value = line.Substring(equal + 1).Trim();
                 var fld = type.GetField(key);
@@ -92,24 +96,21 @@ namespace Spacerunner3
                     Console.WriteLine("Unknown config line:\n{0}\n - Ignoring", line);
                     continue;
                 }
-                bool bvalue;
-                int ivalue;
-                float fvalue;
-                double dvalue;
+
                 SDL.SDL_Scancode svalue;
-                if (fld.FieldType == typeof(bool) && bool.TryParse(value, out bvalue))
+                if (fld.FieldType == typeof(bool) && bool.TryParse(value, out var bvalue))
                 {
                     fld.SetValue(settings, bvalue);
                 }
-                else if (fld.FieldType == typeof(int) && int.TryParse(value, out ivalue))
+                else if (fld.FieldType == typeof(int) && int.TryParse(value, out var ivalue))
                 {
                     fld.SetValue(settings, ivalue);
                 }
-                else if (fld.FieldType == typeof(float) && float.TryParse(value, out fvalue))
+                else if (fld.FieldType == typeof(float) && float.TryParse(value, out var fvalue))
                 {
                     fld.SetValue(settings, fvalue);
                 }
-                else if (fld.FieldType == typeof(double) && double.TryParse(value, out dvalue))
+                else if (fld.FieldType == typeof(double) && double.TryParse(value, out var dvalue))
                 {
                     fld.SetValue(settings, dvalue);
                 }
@@ -141,7 +142,7 @@ namespace Spacerunner3
 
         public void Save(string file)
         {
-            var contents = this.GetType().GetFields().Where(f => f.Name != "Grab").Select(FieldToString);
+            var contents = GetType().GetFields().Where(f => f.Name != "Grab").Select(FieldToString);
             File.WriteAllLines(file, contents);
         }
     }
