@@ -102,16 +102,16 @@ namespace Spacerunner3
             {
                 var left = FarseerPhysics.Common.LineTools.LineIntersect(p1.Vector.Xna, p2.Vector.Xna,
                     new Microsoft.Xna.Framework.Vector2(0, 0), new Microsoft.Xna.Framework.Vector2(0, _height), true,
-                    true, out var point);
+                    true, out _);
                 var right = FarseerPhysics.Common.LineTools.LineIntersect(p1.Vector.Xna, p2.Vector.Xna,
                     new Microsoft.Xna.Framework.Vector2(_width, 0), new Microsoft.Xna.Framework.Vector2(_width, _height),
-                    true, true, out point);
+                    true, true, out _);
                 var up = FarseerPhysics.Common.LineTools.LineIntersect(p1.Vector.Xna, p2.Vector.Xna,
                     new Microsoft.Xna.Framework.Vector2(0, 0), new Microsoft.Xna.Framework.Vector2(_width, 0), true, true,
-                    out point);
+                    out _);
                 var down = FarseerPhysics.Common.LineTools.LineIntersect(p1.Vector.Xna, p2.Vector.Xna,
                     new Microsoft.Xna.Framework.Vector2(0, _height), new Microsoft.Xna.Framework.Vector2(_width, _height),
-                    true, true, out point);
+                    true, true, out _);
                 draw = left | right | up | down;
             }
             if (draw)

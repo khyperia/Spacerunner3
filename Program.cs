@@ -29,20 +29,26 @@ namespace Spacerunner3
 
         private static void InitSettings(string? filename)
         {
-            filename = filename ?? "settings.cfg";
+            if (filename == null)
+            {
+                filename = "settings.cfg";
+            }
             Settings.Grab = File.Exists(filename) ? Settings.Load(filename) : new Settings();
         }
 
         private static void SaveSettings(string? filename)
         {
-            filename = filename ?? "settings.cfg";
+            if (filename == null)
+            {
+                filename = "settings.cfg";
+            }
             if (!File.Exists(filename))
             {
                 Settings.Grab.Save(filename);
             }
         }
 
-        static void Main(string[] args)
+        static void Main(string?[] args)
         {
             var arg = args.Length == 0 ? null : args[0];
             if (arg != null && arg.EndsWith(".srv3") == true)
